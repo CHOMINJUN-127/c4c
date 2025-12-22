@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>c4c</title>
+    <style>
+        /* --- 기존 스타일 유지 --- */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background-color: #ffffff; height: 100vh; display: flex; flex-direction: column; }
+        .header { text-align: center; padding: 20px; background-color: #fff; border-bottom: 1px solid #e5e7eb; }
+        .Bigname { font-size: 4rem; color: #8A2BE2; margin-bottom: 10px; font-weight: 700; }
+
+        /* --- 드롭다운 관련 수정 및 추가 스타일 --- */
+        .dropdown {
+            position: relative;
+            display: inline-block;
+            align-self: center;
+        }
+
+        .circle {
+            width: 48px;
+            height: 48px;
+            border-radius: 10px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: none;
+            cursor: pointer;
+            font-size: 24px;
+            background-color: #f3f3f6;
+            transition: all 0.3s;
+        }
+
+        .circle:hover {
+            background-color: #e0e0e0;
+            transform: scale(1.1);
+        }
+
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            bottom: 60px; /* 버튼 위로 나타나게 설정 */
+            left: 0;
+            background-color: #ffffff;
+            min-width: 160px;
+            box-shadow: 0px 8px 16px rgba(0,0,0,0.1);
+            z-index: 1000;
+            border-radius: 12px;
+            overflow: hidden;
+            opacity: 0;
+            transition: opacity 0.4s ease; /* 나타날 때 부드럽게 */
+        }
+
+        /* 버튼과 메뉴 사이의 간격을 메워 마우스 이동 시 사라짐 방지 */
+        .dropdown::after {
+            content: "";
+            position: absolute;
+            width: 100%;
+            height: 20px;
+            top: -20px;
+            left: 0;
+            display: none;
+        }
+
+        .dropdown:hover .dropdown-content,
+        .dropdown:hover::after {
+            display: block;
+            opacity: 1;
+        }
+
+        .dropdown-content a {
+            color: #333;
+            padding: 12px 16px;
+            text-decoration: none;
+            display: block;
+            font-size: 15px;
+            font-weight: bold;
+            text-align: left;
+        }
+
+        .dropdown-content a:hover {
+            background-color: #f3f4f6;
+            color: #8A2BE2;
+        }
+
+        /* --- 기존 채팅 레이아웃 스타일 유지 --- */
+        .chat-container { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; }
+        .chat-messages { max-width: 800px; width: 100%; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
+        .message-wrapper { display: flex; width: 100%; }
+        .message-wrapper.user { justify-content: flex-end; }
+        .message-wrapper.bot { justify-content: flex-start; }
+        .message { padding: 12px 16px; word-wrap: break-word; line-height: 1.6; white-space: pre-wrap; color: #333; max-width: 65%; border-radius: 12px; box-shadow: 0 1px 0 rgba(0,0,0,0.04); font-size: 15px; }
+        .message-wrapper.user .message { background: linear-gradient(180deg, #8A2BE2, #7a1fb8); color: white; border-bottom-right-radius: 6px; }
+        .message-wrapper.bot .message { background-color: #f3f4f6; color: #111827; border-bottom-left-radius: 6px; }
+        .input-container { padding: 20px; background-color: #fff; }
+        .input-wrapper { max-width: 800px; margin: 0 auto; display: flex; gap: 10px; align-items: flex-end; }
+        .search-input { flex: 1; padding: 12px 16px; border: 1px solid #d1d5db; border-radius: 12px; font-size: 1rem; background-color: #f9fafb; transition: all 0.2s; resize: none; min-height: 50px; max-height: 200px; line-height: 1.5; }
+        .search-input:focus { outline: none; border-color: #8A2BE2; background-color: white; box-shadow: 0 0 0 3px rgba(138, 43, 226, 0.1); }
+        .search-button { padding: 12px 24px; background-color: #8A2BE2; color: white; border: none; border-radius: 12px; cursor: pointer; height: 50px; }
+        .empty-state { text-align: center; margin-top: 120px; font-size: 1.8rem; color: #374151; }
+        .loading { display: none; max-width: 800px; margin: 0 auto; padding: 16px 20px; color: #666; }
+        .loading.show { display: block; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1 class="Bigname">c4c</h1>
+    </div>
+
+    <div class="chat-container" id="chatContainer">
+        <div class="chat-messages" id="chatMessages">
+            <div class="empty-state" id="emptyState">무엇을 도와드릴까요?</div>
+        </div>
+        <div class="loading" id="loading">생각하는 중...</div>
+    </div>
+
+    <div class="input-container">
+        <div class="input-wrapper">
+            <div class="dropdown">
+                <button class="circle">🕹️</button>
+                <div class="dropdown-content">
+                    <a href="c4c.html">📁 c4c-엑셀, PDF</a>
+                    <a href="c4c+.html">✨ 진단시스템</a>
+                </div>
+            </div>
+
+            <textarea 
+                class="search-input" 
+                id="userInput" 
+                placeholder="메시지를 입력하세요..." 
+                rows="1"
+            ></textarea>
+            <button class="search-button" id="sendButton" onclick="sendMessage()">전송</button>
+        </div>
+    </div>
+
+    <script>
+        const userInput = document.getElementById('userInput');
+        const chatMessages = document.getElementById('chatMessages');
+        const chatContainer = document.getElementById('chatContainer');
+        const loading = document.getElementById('loading');
+        const sendButton = document.getElementById('sendButton');
+        const emptyState = document.getElementById('emptyState');
+
+        userInput.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 200) + 'px';
+        });
+
+        userInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        async function sendMessage() {
+            const message = userInput.value.trim();
+            if (!message) return;
+            if (emptyState) emptyState.style.display = 'none';
+
+            const userWrapper = document.createElement('div');
+            userWrapper.className = 'message-wrapper user';
+            const userDiv = document.createElement('div');
+            userDiv.className = 'message';
+            userDiv.textContent = message;
+            userWrapper.appendChild(userDiv);
+            chatMessages.appendChild(userWrapper);
+
+            userInput.value = '';
+            userInput.style.height = 'auto';
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+            loading.classList.add('show');
+            sendButton.disabled = true;
+
+            try {
+                const response = await fetch('http://localhost:5001/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: message })
+                });
+
+                const data = await response.json();
+                const botWrapper = document.createElement('div');
+                botWrapper.className = 'message-wrapper bot';
+                const botDiv = document.createElement('div');
+                botDiv.className = 'message';
+                botDiv.textContent = response.ok ? data.response : '오류가 발생했습니다.';
+                botWrapper.appendChild(botDiv);
+                chatMessages.appendChild(botWrapper);
+            } catch (error) {
+                const botWrapper = document.createElement('div');
+                botWrapper.className = 'message-wrapper bot';
+                const botDiv = document.createElement('div');
+                botDiv.className = 'message';
+                botDiv.textContent = '서버 연결 실패.';
+                botWrapper.appendChild(botDiv);
+                chatMessages.appendChild(botWrapper);
+            }
+
+            loading.classList.remove('show');
+            sendButton.disabled = false;
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+    </script>
+</body>
+</html>
