@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>c4c</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+</head>
+
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+        background-color: #f5f5f5;
+    }
+
+    .Bigname{
+      text-align: center;
+      margin-top: 90px;
+      font-size: 4rem;
+      margin-bottom: 30px;
+      color: #8A2BE2;
+    }
+
+/* 1. 드롭다운의 부모 컨테이너 - 위치 기준점 설정 */
+    .dropdown {
+        position: relative; 
+        display: inline-block;
+        z-index: 10001; /* 페이지 내 다른 어떤 요소보다 위에 있도록 설정 */
+    }
+
+    /* 2. 조이스틱 버튼 스타일 보정 */
+    .circle {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: none;
+        cursor: pointer;
+        font-size: 50px;
+        background-color: #ffffff; /* 버튼 배경을 흰색으로 명확히 */
+        box-shadow: 0 4px 10px rgba(0,0,0,0.1); /* 버튼 자체에도 그림자 부여 */
+        transition: all 0.3s;
+        position: relative;
+    }
+
+    /* 3. 드롭다운 컨텐츠 - 배경 및 레이어 핵심 수정 */
+    .dropdown-content {
+        visibility: hidden;
+        opacity: 0;
+        position: absolute;
+        top: 100%; 
+        left: 50%;
+        transform: translateX(-50%) translateY(10px);
+        
+        /* 배경 충돌 해결: 흰색 배경에 아주 진한 그림자를 넣어 차트 위에서도 돋보이게 함 */
+        background-color: #ffffff !important; 
+        min-width: 200px;
+        box-shadow: 0px 15px 35px rgba(0,0,0,0.25); /* 그림자 강화 */
+        
+        z-index: 10002; /* 차트(보통 z-index가 낮음)보다 훨씬 높게 설정 */
+        border-radius: 12px;
+        border: 1px solid rgba(0, 0, 0, 0.08); /* 옅은 테두리로 경계 구분 */
+        overflow: hidden;
+        margin-top: 15px;
+        
+        /* 사라지는 속도 1.5초 유지 */
+        transition: opacity 1.5s ease, visibility 1.5s ease, transform 1.5s ease;
+    }
+
+    /* 4. 마우스 이동 통로 (징검다리) */
+    .dropdown::after {
+        content: "";
+        position: absolute;
+        width: 140%; 
+        height: 30px; 
+        bottom: -30px;
+        left: -20%;
+        background: transparent;
+        z-index: -1; /* 버튼 뒤로 숨김 */
+    }
+
+    /* 5. 호버 액션 */
+    .dropdown:hover .dropdown-content {
+        visibility: visible;
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+        transition: opacity 0.2s ease, visibility 0.2s ease, transform 0.2s ease;
+    }
+
+    /* 6. 메뉴 링크 스타일 */
+    .dropdown-content a {
+        color: #333;
+        padding: 15px 20px;
+        text-decoration: none;
+        display: block;
+        font-size: 16px;
+        text-align: left;
+        font-weight: bold;
+        background-color: #ffffff; /* 링크 자체 배경도 흰색 고정 */
+        border-bottom: 1px solid #f0f0f0;
+    }
+
+    .dropdown-content a:hover {
+        background-color: #f4ebff !important;
+        color: #8A2BE2;
+    }
+
+    .circle{
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: none;
+      cursor: pointer;
+      font-size: 50px;
+      background-color: #f0f0f0;
+      transition: all 0.3s;
+    }
+
+    .circle:hover {
+      background-color: #e0e0e0;
+      transform: scale(1.1);
+    }
+
+    .circle-container {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 50px;
+    }
+
+    .Excel, .PDF {
+        width: 200px;
+        height: 60px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-size: 18px;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 600;
+        transition: all 0.3s;
+    }
+
+    .Excel {
+        background-color: #4CAF50;
+        color: white;
+    }
+
+    .Excel:hover {
+        background-color: #45a049;
+        transform: scale(1.05);
+    }
+
+    .PDF {
+        background-color: #f44336;
+        color: white;
+    }
+
+    .PDF:hover {
+        background-color: #da190b;
+        transform: scale(1.05);
+    }
+
+    .button-container {
+        display: flex;
+        gap: 50px;
+        margin-top: 50px;
+        margin-bottom: 30px;
+        justify-content: center;
+    }
+
+    input[type="file"] {
+      display: none;
+    }
+
+    .controls {
+      margin: 20px 0;
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+      flex-wrap: wrap;
+      background-color: white;
+      padding: 20px;
+      border-radius: 8px;
+      max-width: 900px;
+      margin-left: auto;
+      margin-right: auto;
+      display: none;
+    }
+
+    .controls.active {
+      display: flex;
+    }
+
+    .control-group {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    label {
+      font-weight: 600;
+      font-size: 16px;
+    }
+
+    select {
+      padding: 10px 15px;
+      border: 2px solid #ddd;
+      border-radius: 4px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    .chart-container {
+      margin-top: 20px;
+      padding: 30px;
+      max-width: 1000px;
+      margin-left: auto;
+      margin-right: auto;
+      background-color: white;
+      border-radius: 8px;
+      display: none;
+    }
+
+    .chart-container.active {
+      display: block;
+    }
+
+    .chart-wrapper {
+      position: relative;
+      height: 450px;
+      margin-bottom: 20px;
+    }
+
+    .message {
+      text-align: center;
+      margin: 20px auto;
+      padding: 15px;
+      border-radius: 4px;
+      max-width: 500px;
+      display: none;
+    }
+
+    .message.error {
+      background-color: #fee;
+      color: #c33;
+      display: block;
+    }
+
+    .message.success {
+      background-color: #efe;
+      color: #3c3;
+      display: block;
+    }
+
+    .pdf-summary {
+      max-width: 900px;
+      margin: 30px auto;
+      padding: 30px;
+      background-color: white;
+      border-radius: 8px;
+      display: none;
+    }
+
+    .pdf-summary.active {
+      display: block;
+    }
+
+    .pdf-summary h2 {
+      color: #333;
+      margin-bottom: 20px;
+      font-size: 1.5rem;
+      border-bottom: 2px solid #ddd;
+      padding-bottom: 10px;
+    }
+
+    .summary-text {
+      line-height: 2;
+      font-size: 16px;
+      color: #444;
+    }
+
+    .summary-text p {
+      margin-bottom: 20px;
+      padding: 15px;
+      background-color: #f9f9f9;
+      border-left: 4px solid #8A2BE2;
+      border-radius: 4px;
+      text-align: justify;
+    }
+</style>
+
+<body>
+    <div>
+        <h1 class="Bigname">c4c</h1>
+    </div>
+
+    <!-- <div class="circle-container">
+        <button class="circle" ondblclick="location.href='index.html'">🕹️</button>
+    </div> -->
+
+    <div class="circle-container">
+        <div class="dropdown">
+            <button class="circle">🕹️</button>
+            <div class="dropdown-content">
+                <a href="index.html">🏠 메인으로 페이지</a>
+                <a href="c4c+.html">✨ 진단시스템</a>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="button-container">
+        <button class="Excel" onclick="document.getElementById('excelInput').click()">엑셀 파일 업로드</button>
+        <button class="PDF" onclick="document.getElementById('pdfInput').click()">PDF 파일 업로드</button>
+    </div>
+
+    <input type="file" id="excelInput" accept=".csv">
+    <input type="file" id="pdfInput" accept=".pdf">
+
+    <div id="message" class="message"></div>
+
+    <div class="controls" id="controls">
+        <div class="control-group">
+            <label for="xAxis">X축:</label>
+            <select id="xAxis" onchange="createChart()"></select>
+        </div>
+        <div class="control-group">
+            <label for="yAxis">Y축:</label>
+            <select id="yAxis" onchange="createChart()"></select>
+        </div>
+        <div class="control-group">
+            <label for="chartType">그래프 유형:</label>
+            <select id="chartType" onchange="createChart()">
+                <option value="line">선 그래프</option>
+                <option value="bar">막대 그래프</option>
+                <option value="scatter">산점도</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="chart-container" id="chartContainer">
+        <div class="chart-wrapper">
+            <canvas id="myChart"></canvas>
+        </div>
+    </div>
+
+    <div class="pdf-summary" id="pdfSummary">
+        <h2>PDF 요약</h2>
+        <div class="summary-text" id="summaryText"></div>
+    </div>
+
+    <script>
+        if (typeof pdfjsLib !== 'undefined') {
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+        }
+
+        let currentData = [];
+        let columns = [];
+        let chart = null;
+
+        // CSV 파일 업로드
+        document.getElementById('excelInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            console.log('CSV 파일 선택됨:', file.name);
+            document.getElementById('pdfSummary').classList.remove('active');
+            showMessage('파일을 읽는 중...', 'success');
+
+            const reader = new FileReader();
+
+            reader.onload = function(event) {
+                console.log('CSV 파일 읽기 완료');
+                try {
+                    let text = event.target.result;
+                    
+                    // 여러 종류의 BOM 제거
+                    text = text.replace(/^\uFEFF/, '');
+                    text = text.replace(/^\ufeff/, '');
+                    text = text.replace(/^\u00EF\u00BB\u00BF/, '');
+                    
+                    // 특수 문자 제거
+                    text = text.replace(/\ufffd/g, '');
+                    text = text.replace(/�/g, '');
+                    
+                    // 줄 분리
+                    const lines = text.split(/\r\n|\n|\r/).filter(line => line.trim().length > 0);
+                    console.log('총 라인 수:', lines.length);
+                    
+                    if (lines.length < 1) {
+                        showMessage('파일에 데이터가 없습니다', 'error');
+                        return;
+                    }
+
+                    // 헤더 파싱 - 특수문자 제거
+                    const headerLine = lines[0].replace(/�/g, '').replace(/\ufffd/g, '');
+                    columns = headerLine.split(',').map(h => h.trim().replace(/[^\w\sㄱ-ㅎㅏ-ㅣ가-힣]/g, ''));
+                    console.log('컬럼:', columns);
+
+                    // 데이터 파싱
+                    const data = [];
+                    for (let i = 1; i < lines.length; i++) {
+                        let line = lines[i].trim();
+                        if (!line) continue;
+                        
+                        // 특수문자 제거
+                        line = line.replace(/�/g, '').replace(/\ufffd/g, '');
+
+                        const values = line.split(',').map(v => v.trim());
+                        
+                        const row = {};
+                        for (let j = 0; j < columns.length; j++) {
+                            const val = values[j] || '';
+                            const num = parseFloat(val);
+                            row[columns[j]] = isNaN(num) ? val : num;
+                        }
+                        data.push(row);
+                    }
+
+                    console.log('파싱된 데이터:', data);
+
+                    if (data.length === 0) {
+                        showMessage('데이터 행이 없습니다', 'error');
+                        return;
+                    }
+
+                    currentData = data;
+                    populateSelects();
+                    document.getElementById('controls').classList.add('active');
+                    document.getElementById('chartContainer').classList.add('active');
+                    createChart();
+                    showMessage('CSV 파일이 업로드되었습니다!', 'success');
+
+                } catch (error) {
+                    console.error('CSV 파싱 에러:', error);
+                    showMessage('CSV 파일 읽기 실패: ' + error.message, 'error');
+                }
+            };
+
+            reader.onerror = function(error) {
+                console.error('FileReader 에러:', error);
+                showMessage('파일을 읽을 수 없습니다', 'error');
+            };
+
+            // EUC-KR 시도 후 UTF-8 시도
+            try {
+                reader.readAsText(file, 'EUC-KR');
+            } catch (e) {
+                reader.readAsText(file, 'UTF-8');
+            }
+            e.target.value = '';
+        });
+
+        // PDF 파일 업로드
+        document.getElementById('pdfInput').addEventListener('change', async function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            console.log('PDF 파일 선택됨:', file.name);
+            document.getElementById('controls').classList.remove('active');
+            document.getElementById('chartContainer').classList.remove('active');
+            
+            showMessage('PDF를 읽는 중...', 'success');
+
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                console.log('ArrayBuffer 크기:', arrayBuffer.byteLength);
+                
+                const loadingTask = pdfjsLib.getDocument({
+                    data: arrayBuffer
+                });
+                
+                const pdf = await loadingTask.promise;
+                console.log('PDF 로드 완료, 총 페이지:', pdf.numPages);
+                
+                let fullText = '';
+                const maxPages = Math.min(pdf.numPages, 10);
+                
+                for (let i = 1; i <= maxPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const textContent = await page.getTextContent();
+                    const pageText = textContent.items.map(item => item.str).join(' ');
+                    fullText += pageText + '\n\n';
+                    console.log(`페이지 ${i} 처리 완료`);
+                }
+
+                console.log('추출된 텍스트 길이:', fullText.length);
+
+                // 특수문자 제거
+                fullText = fullText.replace(/�/g, '').replace(/\ufffd/g, '');
+
+                if (fullText.trim().length === 0) {
+                    document.getElementById('summaryText').innerHTML = '<p style="text-align: center; color: #999;">PDF에서 텍스트를 추출할 수 없습니다. (이미지 기반 PDF일 수 있습니다)</p>';
+                } else {
+                    // 텍스트 정리
+                    const cleanText = fullText
+                        .replace(/\s+/g, ' ')
+                        .trim();
+                    
+                    // 문장 단위로 분리
+                    const sentences = cleanText.match(/[^.!?]+[.!?]+/g) || [cleanText];
+                    
+                    // 적절한 길이의 문단 만들기
+                    const paragraphs = [];
+                    let currentParagraph = '';
+                    
+                    for (let sentence of sentences) {
+                        sentence = sentence.trim();
+                        if (sentence.length < 10) continue;
+                        
+                        currentParagraph += sentence + ' ';
+                        
+                        if (currentParagraph.length > 200) {
+                            paragraphs.push(currentParagraph.trim());
+                            currentParagraph = '';
+                        }
+                        
+                        if (paragraphs.length >= 8) break;
+                    }
+                    
+                    if (currentParagraph.trim() && paragraphs.length < 8) {
+                        paragraphs.push(currentParagraph.trim());
+                    }
+                    
+                    document.getElementById('summaryText').innerHTML = paragraphs
+                        .map((p, index) => `
+                            <p style="margin-bottom: 20px; padding: 15px; background-color: #f9f9f9; border-left: 4px solid #8A2BE2; border-radius: 4px; line-height: 1.8;">
+                                ${p}
+                            </p>
+                        `)
+                        .join('');
+                }
+                
+                document.getElementById('pdfSummary').classList.add('active');
+                showMessage('PDF 파일이 업로드되었습니다!', 'success');
+                
+            } catch (error) {
+                console.error('PDF 에러:', error);
+                showMessage('PDF 파일 읽기 실패: ' + error.message, 'error');
+            }
+
+            e.target.value = '';
+        });
+
+        function populateSelects() {
+            const xAxis = document.getElementById('xAxis');
+            const yAxis = document.getElementById('yAxis');
+
+            xAxis.innerHTML = '';
+            yAxis.innerHTML = '';
+
+            columns.forEach(col => {
+                const opt1 = document.createElement('option');
+                opt1.value = col;
+                opt1.textContent = col;
+                xAxis.appendChild(opt1);
+
+                const opt2 = document.createElement('option');
+                opt2.value = col;
+                opt2.textContent = col;
+                yAxis.appendChild(opt2);
+            });
+
+            if (columns.length > 1) {
+                yAxis.value = columns[1];
+            }
+        }
+
+        function createChart() {
+            if (currentData.length === 0) return;
+
+            const xCol = document.getElementById('xAxis').value;
+            const yCol = document.getElementById('yAxis').value;
+            const chartType = document.getElementById('chartType').value;
+
+            const xData = currentData.map(row => row[xCol]);
+            const yData = currentData.map(row => {
+                const val = row[yCol];
+                return isNaN(val) ? 0 : parseFloat(val);
+            });
+
+            const ctx = document.getElementById('myChart').getContext('2d');
+
+            if (chart) {
+                chart.destroy();
+            }
+
+            const chartConfig = {
+                type: chartType,
+                data: {
+                    labels: xData,
+                    datasets: [{
+                        label: yCol,
+                        data: yData,
+                        borderColor: '#4CAF50',
+                        backgroundColor: chartType === 'line' ? 'rgba(76, 175, 80, 0.1)' : '#4CAF50',
+                        fill: true,
+                        borderWidth: 2,
+                        tension: 0.3,
+                        pointRadius: 5,
+                        pointHoverRadius: 7,
+                        pointBackgroundColor: '#4CAF50',
+                        pointBorderColor: '#4CAF50'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: {
+                                maxRotation: 0,
+                                minRotation: 0
+                            }
+                        },
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            };
+
+            chart = new Chart(ctx, chartConfig);
+        }
+
+        function showMessage(text, type) {
+            const msg = document.getElementById('message');
+            msg.textContent = text;
+            msg.className = 'message ' + type;
+            setTimeout(() => {
+                if (msg.className.includes(type)) {
+                    msg.className = 'message';
+                }
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
+
+
+
